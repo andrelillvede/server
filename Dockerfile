@@ -13,4 +13,5 @@ RUN apk add --update make git g++ python && \
 ADD . /app
 
 ENV NODE_ENV production
+EXPOSE 8080
 ENTRYPOINT ["bin/server", "--port", "8080"]
