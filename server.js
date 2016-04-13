@@ -27,6 +27,11 @@ var Proxy = require('./proxy');
 var rand_id = require('./lib/rand_id');
 
 var PRODUCTION = process.env.NODE_ENV === 'production';
+var TUNNEL_URL = process.env.TUNNEL_URL;
+
+if(!TUNNEL_URL)
+  throw new Error('TUNNEL_URL environment variable must be set');
+
 
 // id -> client http server
 var clients = Object.create(null);
@@ -39,13 +44,14 @@ var stats = {
 function maybe_bounce(req, res, sock, head) {
     // without a hostname, we won't know who the request is for
     var hostname = req.headers.host;
+
     if (!hostname) {
         return false;
     }
 
-    var subdomain = tldjs.getSubdomain(hostname);
-    if (!subdomain) {
-        return false;
+    var subdomain = hostname.split(".")[0];
+    if (hostname === TUNNEL_URL) {
+         return false;
     }
 
     var client_id = subdomain;
@@ -134,7 +140,7 @@ function maybe_bounce(req, res, sock, head) {
         var client_req = http.request(opt, function(client_res) {
             // write response code and headers
             res.writeHead(client_res.statusCode, client_res.headers);
-            
+
             client_res.pipe(res);
             on_finished(client_res, function(err) {
                 done();
@@ -148,7 +154,6 @@ function maybe_bounce(req, res, sock, head) {
 }
 
 function new_client(id, opt, cb) {
-
     // can't ask for id already is use
     // TODO check this new id again
     if (clients[id]) {
@@ -206,6 +211,7 @@ module.exports = function(opt) {
     });
 
     app.get('/', function(req, res, next) {
+        debug('get /')
         proxy.web(req, res);
     });
 
